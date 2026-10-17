@@ -1,0 +1,7 @@
+﻿# moe-healthcheck 依赖
+# 说明：除 numpy 外无第三方依赖；tg_weights.py 已自带，无需单独安装。
+numpy>=1.21
+
+# TGAI 引擎的 Python 绑定（私有，需从本地安装）
+# pip install -e "D:\\tgai_nlp\\TGAI GO\\python"
+# tgai-go @ file:///D:/tgai_nlp/TGAI%20GO/python

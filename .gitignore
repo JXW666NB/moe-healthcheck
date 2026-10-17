@@ -1,0 +1,32 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+
+# 模型文件（绝不入库）
+*.tg
+*.TG
+*.pt
+*.gguf
+*.safetensors
+*.bin
+
+# dump 与临时
+_live/
+_dump/
+dump/
+*.tmp
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
