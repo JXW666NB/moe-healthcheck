@@ -54,6 +54,59 @@ python moe_health.py model.tg --json report.json
 
 ---
 
+## 支持 GGUF（llama.cpp 生态）
+
+**不需要原生加载器 —— 用转换器把 GGUF 转成 `.tg` 即可，一条命令。**
+
+```bash
+# 转换 + 三层验证
+python tools/gguf2tg.py model.gguf -o model.tg --dtype fp16 --verify
+
+# 只验证已有的 .tg
+python tools/gguf2tg.py --verify-only model.tg
+```
+
+**★ 转换器能力**（`tools/gguf_to_tg.py`，63 KB，仅依赖 numpy）：
+
+| 项 | 支持 |
+|---|---|
+| 量化格式 | Q4_0 / Q8_0 / **Q4_K / Q5_K / Q6_K** / F16 / F32 |
+| 架构 | Llama / **Qwen2**（含 QKV bias、GQA、YaRN/RoPE 变体） |
+| 分词器 | BPE merges + 特殊标记 + ChatML 模板识别 |
+| 输出 | `.TG` v3 + sidecar `.tokenizer.json` |
+
+**★ 验证的三层**（`--verify`）：
+
+```
+① 加载验证    超参是否合理（层数/维度/头数整除/词表范围）
+② 分词往返    encode(s) → decode 必须得到 s（5 个探针，含中英数）
+③ 前向 + 生成 logits 无 NaN/Inf，能生成非空文本，且不含 <UNK>
+```
+
+**★★ 实测（Qwen2.5-0.5B-Instruct Q8_0 → .TG）**
+
+```
+输入: 644 MB GGUF
+转换: 63 秒 → 944 MB .TG（24 层 / 896 维 / 14 头 / 词表 151936）
+验证: 三层全 PASS
+  · 分词往返 5/5 一致
+  · prefill 正常，top-5 logits 合理
+  · 生成 24 token
+```
+
+**★★★ 为什么用转换器而不是原生加载：**
+
+| | 转换器 | 引擎原生 |
+|---|---|---|
+| 工作量 | ✅ 已完成 | 2~3 周（重写解析 + 反量化 + 分词器） |
+| 加载速度 | ✅ `.tg` 权重表预索引，O(1) 查找 | GGUF 每次都要解析元数据 |
+| 可复用 | ✅ 转一次，反复加载 | 每次直接读 GGUF |
+| 磁盘 | 多占一份（944 MB） | 不额外占 |
+
+**⇒ 除非你要频繁切换几十个 GGUF 且磁盘吃紧，否则转换器更划算。**
+
+---
+
 ## 输出示例
 
 ```
@@ -181,12 +234,16 @@ moe-healthcheck/
 ├── requirements.txt
 ├── LICENSE                # MIT
 ├── README.md
+├── tools/
+│   ├── gguf2tg.py         # GGUF → .TG 一键转换 + 三层验证 ★
+│   └── gguf_to_tg.py      # 转换器本体（GGUF v3 解析 + 反量化 + 分词器）
 ├── docs/
 │   ├── METRICS.md         # 五项指标的完整定义与推导
 │   ├── CASE_STUDY_V2.7.md # 一个真实模型的完整体检记录
 │   └── LIMITATIONS.md     # 已知局限（必读）
 └── examples/
-    └── report_v27.txt     # 实际输出样例
+    ├── report_v27.txt             # 体检输出样例
+    └── tg_tokenizer_format.txt    # .tg 分词表格式实测
 ```
 
 ---
